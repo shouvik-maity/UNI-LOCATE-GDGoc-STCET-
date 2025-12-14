@@ -49,9 +49,6 @@ A modern,lost & found management system designed specifically for university cam
 - **[Firebase Authentication](https://firebase.google.com/products/auth)** - User authentication
 - **[Firebase Firestore](https://firebase.google.com/products/firestore)** - Real-time database (planned)
 
-### **AI & Analytics**
-- **[Gemini AI](https://ai.google.dev/)** - Image recognition and analysis
-- **[Google AI Studio](https://makersuite.google.com/)** - AI model integration
 
 ### **Development Tools**
 - **[ESLint](https://eslint.org/)** - Code linting
