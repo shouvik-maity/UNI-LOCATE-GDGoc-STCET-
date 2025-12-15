@@ -36,15 +36,19 @@ interface MatchResult {
   createdAt: string
 }
 
+
 export default function AIAgentPage() {
   const { user, loading } = useAuth()
   const [matches, setMatches] = useState<MatchResult[]>([])
+  const [potentialMatches, setPotentialMatches] = useState<any[]>([])
   const [lostItems, setLostItems] = useState<any[]>([])
   const [foundItems, setFoundItems] = useState<any[]>([])
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [isLoadingPotential, setIsLoadingPotential] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [sortBy, setSortBy] = useState<'score' | 'date' | 'category'>('score')
+  const [activeTab, setActiveTab] = useState<'confirmed' | 'potential'>('confirmed')
   const [analysisStats, setAnalysisStats] = useState({
     totalAnalyzed: 0,
     matchesFound: 0,
@@ -57,6 +61,7 @@ export default function AIAgentPage() {
       fetchData()
     }
   }, [loading, user])
+
 
 
 
@@ -105,6 +110,36 @@ export default function AIAgentPage() {
     }
   }
 
+  const fetchPotentialMatches = async () => {
+    try {
+      setIsLoadingPotential(true)
+      
+      const params = new URLSearchParams({
+        minScore: '15', // Lower threshold for potential matches
+        limit: '100'
+      })
+      
+      if (selectedCategory !== 'all') {
+        params.append('category', selectedCategory)
+      }
+      
+      const response = await fetch(`/api/ai/potential-matches?${params}`)
+      const data = await response.json()
+
+      if (data.success) {
+        setPotentialMatches(data.data.matches)
+      } else {
+        console.error('Failed to fetch potential matches:', data.message)
+        setPotentialMatches([])
+      }
+    } catch (error) {
+      console.error('Error fetching potential matches:', error)
+      setPotentialMatches([])
+    } finally {
+      setIsLoadingPotential(false)
+    }
+  }
+
   const runAIAnalysis = async () => {
     try {
       setIsAnalyzing(true)
@@ -145,6 +180,7 @@ export default function AIAgentPage() {
   }
 
 
+
   // Filter and sort matches based on search criteria
   const filteredMatches = matches.filter(match => {
     // Skip matches with missing data
@@ -176,6 +212,41 @@ export default function AIAgentPage() {
         return 0
     }
   })
+
+  // Filter and sort potential matches
+  const filteredPotentialMatches = potentialMatches.filter(match => {
+    const matchesSearch = searchQuery === '' ||
+      (match.lostItem.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (match.foundItem.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (match.lostItem.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (match.foundItem.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (match.similarities || []).some(s => s && s.toLowerCase().includes(searchQuery.toLowerCase()))
+
+    const matchesCategory = selectedCategory === 'all' || 
+      match.lostItem.category === selectedCategory || 
+      match.foundItem.category === selectedCategory
+
+    return matchesSearch && matchesCategory
+  }).sort((a, b) => {
+    switch (sortBy) {
+      case 'score':
+        return (b.matchScore || 0) - (a.matchScore || 0)
+      case 'date':
+        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+      case 'category':
+        return (a.lostItem?.category || '').localeCompare(b.lostItem?.category || '')
+      default:
+        return 0
+    }
+  })
+
+  // Handle tab change
+  const handleTabChange = (tab: 'confirmed' | 'potential') => {
+    setActiveTab(tab)
+    if (tab === 'potential' && potentialMatches.length === 0) {
+      fetchPotentialMatches()
+    }
+  }
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>
@@ -262,10 +333,14 @@ export default function AIAgentPage() {
           </div>
         </div>
 
+
         {/* Search and Filter */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
           <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between mb-4">
-            <h2 className="text-xl font-bold">🎯 AI Match Results</h2>
+            <div>
+              <h2 className="text-xl font-bold">🎯 AI Match Results</h2>
+              <p className="text-gray-600 text-sm">View confirmed matches and discover new potential matches</p>
+            </div>
             
             <div className="flex flex-wrap gap-3">
               <input
@@ -299,89 +374,282 @@ export default function AIAgentPage() {
             </div>
           </div>
 
+          {/* Tab Navigation */}
+          <div className="flex gap-2 border-b border-gray-200 mb-4">
+            <button
+              onClick={() => handleTabChange('confirmed')}
+              className={`px-4 py-2 font-semibold border-b-2 transition-colors ${
+                activeTab === 'confirmed'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              ✅ Confirmed Matches ({matches.length})
+            </button>
+            <button
+              onClick={() => handleTabChange('potential')}
+              className={`px-4 py-2 font-semibold border-b-2 transition-colors relative ${
+                activeTab === 'potential'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              🔍 Potential Matches ({potentialMatches.length})
+              {isLoadingPotential && (
+                <div className="ml-2 inline-block">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                </div>
+              )}
+            </button>
+          </div>
+
           <p className="text-gray-600 text-sm">
-            Showing {filteredMatches.length} of {matches.length} AI-generated matches
+            {activeTab === 'confirmed' 
+              ? `Showing ${filteredMatches.length} of ${matches.length} confirmed AI-generated matches`
+              : `Showing ${filteredPotentialMatches.length} of ${potentialMatches.length} potential matches`
+            }
           </p>
         </div>
 
+
         {/* Matches Display */}
         <div className="space-y-6">
-          {filteredMatches.length === 0 ? (
-            <div className="bg-white rounded-lg shadow-md p-12 text-center">
-              <div className="text-6xl mb-4">🤖</div>
-              <h3 className="text-xl font-bold mb-2">No AI Matches Found</h3>
-              <p className="text-gray-600 mb-6">
-                {matches.length === 0 
-                  ? 'Run AI analysis to generate intelligent matches between lost and found items'
-                  : 'No matches match your current search criteria'
-                }
-              </p>
-              {matches.length === 0 && (
-                <button
-                  onClick={runAIAnalysis}
-                  disabled={isAnalyzing}
-                  className="bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary-dark disabled:opacity-50"
-                >
-                  🚀 Start AI Analysis
-                </button>
-              )}
-            </div>
-          ) : (
-            filteredMatches.map((match) => (
-              <div key={match._id} className="bg-white rounded-lg shadow-md p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="text-2xl">🎯</div>
-                    <div>
-                      <h3 className="text-xl font-bold">Match Score: {match.matchScore}%</h3>
+          {activeTab === 'confirmed' ? (
+            // Confirmed Matches Tab
+            filteredMatches.length === 0 ? (
+              <div className="bg-white rounded-lg shadow-md p-12 text-center">
+                <div className="text-6xl mb-4">🤖</div>
+                <h3 className="text-xl font-bold mb-2">No Confirmed Matches Found</h3>
+                <p className="text-gray-600 mb-6">
+                  {matches.length === 0 
+                    ? 'Run AI analysis to generate intelligent matches between lost and found items'
+                    : 'No confirmed matches match your current search criteria'
+                  }
+                </p>
+                {matches.length === 0 && (
+                  <button
+                    onClick={runAIAnalysis}
+                    disabled={isAnalyzing}
+                    className="bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary-dark disabled:opacity-50"
+                  >
+                    🚀 Start AI Analysis
+                  </button>
+                )}
+              </div>
+            ) : (
+              filteredMatches.map((match) => (
+                <div key={match._id} className="bg-white rounded-lg shadow-md p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="text-2xl">🎯</div>
+                      <div>
+                        <h3 className="text-xl font-bold">Match Score: {match.matchScore}%</h3>
+                        <span
+                          className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                            match.matchScore >= 80
+                              ? 'bg-green-100 text-green-800'
+                              : match.matchScore >= 60
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}
+                        >
+                          {match.matchScore >= 80 ? '🟢 High Confidence' : 
+                           match.matchScore >= 60 ? '🟡 Medium Confidence' : 
+                           '🔴 Low Confidence'}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="text-right">
+                      <p className="text-sm text-gray-600">
+                        {new Date(match.createdAt).toLocaleDateString()}
+                      </p>
                       <span
                         className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                          match.matchScore >= 80
+                          match.status === 'confirmed'
                             ? 'bg-green-100 text-green-800'
-                            : match.matchScore >= 60
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-red-100 text-red-800'
+                            : match.status === 'rejected'
+                            ? 'bg-red-100 text-red-800'
+                            : match.status === 'resolved'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-yellow-100 text-yellow-800'
                         }`}
                       >
-                        {match.matchScore >= 80 ? '🟢 High Confidence' : 
-                         match.matchScore >= 60 ? '🟡 Medium Confidence' : 
-                         '🔴 Low Confidence'}
+                        {match.status === 'confirmed' ? '✅ Confirmed' :
+                         match.status === 'rejected' ? '❌ Rejected' :
+                         match.status === 'resolved' ? '🎉 Resolved' :
+                         '⏳ Pending'}
                       </span>
                     </div>
                   </div>
-                  
-                  <div className="text-right">
-                    <p className="text-sm text-gray-600">
-                      {new Date(match.createdAt).toLocaleDateString()}
-                    </p>
-                    <span
-                      className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                        match.status === 'confirmed'
-                          ? 'bg-green-100 text-green-800'
-                          : match.status === 'rejected'
-                          ? 'bg-red-100 text-red-800'
-                          : match.status === 'resolved'
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}
-                    >
-                      {match.status === 'confirmed' ? '✅ Confirmed' :
-                       match.status === 'rejected' ? '❌ Rejected' :
-                       match.status === 'resolved' ? '🎉 Resolved' :
-                       '⏳ Pending'}
-                    </span>
+
+                  {/* Items Comparison */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Lost Item */}
+                    <div className="border border-red-200 rounded-lg p-4 bg-red-50">
+                      <h4 className="font-bold text-red-800 mb-3 flex items-center gap-2">
+                        📍 Lost Item
+                      </h4>
+                      {match.lostItem ? (
+                        <div className="space-y-2">
+                          <p><span className="font-semibold">Title:</span> {match.lostItem.title || 'N/A'}</p>
+                          <p><span className="font-semibold">Description:</span> {match.lostItem.description || 'N/A'}</p>
+                          <p><span className="font-semibold">Category:</span> {match.lostItem.category || 'N/A'}</p>
+                          <p><span className="font-semibold">Location:</span> {match.lostItem.location || 'N/A'}</p>
+                          <p><span className="font-semibold">Date Lost:</span> {match.lostItem.dateLost ? new Date(match.lostItem.dateLost).toLocaleDateString() : 'N/A'}</p>
+                          <p><span className="font-semibold">Reported by:</span> {match.lostItem.userName || 'N/A'}</p>
+                        </div>
+                      ) : (
+                        <div className="text-gray-500 italic">Lost item data not found</div>
+                      )}
+                      {match.lostItem?.image && (
+                        <img
+                          src={match.lostItem.image}
+                          alt={match.lostItem.title || 'Lost item'}
+                          className="w-full h-32 object-cover rounded-lg mt-3"
+                        />
+                      )}
+                    </div>
+
+                    {/* Found Item */}
+                    <div className="border border-green-200 rounded-lg p-4 bg-green-50">
+                      <h4 className="font-bold text-green-800 mb-3 flex items-center gap-2">
+                        ✅ Found Item
+                      </h4>
+                      {match.foundItem ? (
+                        <div className="space-y-2">
+                          <p><span className="font-semibold">Title:</span> {match.foundItem.title || 'N/A'}</p>
+                          <p><span className="font-semibold">Description:</span> {match.foundItem.description || 'N/A'}</p>
+                          <p><span className="font-semibold">Category:</span> {match.foundItem.category || 'N/A'}</p>
+                          <p><span className="font-semibold">Location:</span> {match.foundItem.location || 'N/A'}</p>
+                          <p><span className="font-semibold">Date Found:</span> {match.foundItem.dateFound ? new Date(match.foundItem.dateFound).toLocaleDateString() : 'N/A'}</p>
+                          <p><span className="font-semibold">Found by:</span> {match.foundItem.userName || 'N/A'}</p>
+                        </div>
+                      ) : (
+                        <div className="text-gray-500 italic">Found item data not found</div>
+                      )}
+                      {match.foundItem?.image && (
+                        <img
+                          src={match.foundItem.image}
+                          alt={match.foundItem.title || 'Found item'}
+                          className="w-full h-32 object-cover rounded-lg mt-3"
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* AI Similarities */}
+                  <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 className="font-bold text-blue-800 mb-3">🧠 AI Similarities Detected:</h4>
+                    <ul className="space-y-2">
+                      {match.similarities.map((similarity, index) => (
+                        <li key={index} className="flex items-center gap-2 text-blue-700">
+                          <span className="text-green-500">✓</span>
+                          {similarity}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3 mt-6">
+                    {match.status === 'pending' && (
+                      <>
+                        <button className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded font-semibold">
+                          ✅ Confirm Match
+                        </button>
+                        <button className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded font-semibold">
+                          ❌ Reject Match
+                        </button>
+                      </>
+                    )}
+                    <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded font-semibold">
+                      📧 Contact Both Parties
+                    </button>
                   </div>
                 </div>
+              ))
+            )
+          ) : (
+            // Potential Matches Tab
+            isLoadingPotential ? (
+              <div className="bg-white rounded-lg shadow-md p-12 text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                <h3 className="text-xl font-bold mb-2">🔍 Analyzing Potential Matches...</h3>
+                <p className="text-gray-600">AI is analyzing all lost and found items to discover new potential matches</p>
+              </div>
+            ) : filteredPotentialMatches.length === 0 ? (
+              <div className="bg-white rounded-lg shadow-md p-12 text-center">
+                <div className="text-6xl mb-4">🔍</div>
+                <h3 className="text-xl font-bold mb-2">No Potential Matches Found</h3>
+                <p className="text-gray-600 mb-6">
+                  {potentialMatches.length === 0
+                    ? 'AI will analyze all lost and found items to discover potential matches. Click "Find Potential Matches" to start.'
+                    : 'No potential matches match your current search criteria'
+                  }
+                </p>
+                {potentialMatches.length === 0 && (
+                  <button
+                    onClick={fetchPotentialMatches}
+                    disabled={isLoadingPotential}
+                    className="bg-purple-500 hover:bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold disabled:opacity-50"
+                  >
+                    🔍 Find Potential Matches
+                  </button>
+                )}
+              </div>
+            ) : (
+              filteredPotentialMatches.map((match, index) => (
+                <div key={`potential-${match.lostItem._id}-${match.foundItem._id}-${index}`} className="bg-white rounded-lg shadow-md p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="text-2xl">🔍</div>
+                      <div>
+                        <h3 className="text-xl font-bold">Match Score: {match.matchScore}%</h3>
+                        <span
+                          className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                            match.matchScore >= 80
+                              ? 'bg-green-100 text-green-800'
+                              : match.matchScore >= 60
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-orange-100 text-orange-800'
+                          }`}
+                        >
+                          {match.matchScore >= 80 ? '🟢 High Confidence' : 
+                           match.matchScore >= 60 ? '🟡 Medium Confidence' : 
+                           '🟠 Low Confidence'}
+                        </span>
+                        {match.isExisting && (
+                          <span className="ml-2 inline-block px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold">
+                            Already Confirmed
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="text-right">
+                      <p className="text-sm text-gray-600">
+                        {new Date(match.createdAt).toLocaleDateString()}
+                      </p>
+                      <span
+                        className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                          match.isExisting
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-purple-100 text-purple-800'
+                        }`}
+                      >
+                        {match.isExisting ? '📋 Confirmed' : '🆕 Potential'}
+                      </span>
+                    </div>
+                  </div>
 
-
-                {/* Items Comparison */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Lost Item */}
-                  <div className="border border-red-200 rounded-lg p-4 bg-red-50">
-                    <h4 className="font-bold text-red-800 mb-3 flex items-center gap-2">
-                      📍 Lost Item
-                    </h4>
-                    {match.lostItem ? (
+                  {/* Items Comparison */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Lost Item */}
+                    <div className="border border-red-200 rounded-lg p-4 bg-red-50">
+                      <h4 className="font-bold text-red-800 mb-3 flex items-center gap-2">
+                        📍 Lost Item
+                      </h4>
                       <div className="space-y-2">
                         <p><span className="font-semibold">Title:</span> {match.lostItem.title || 'N/A'}</p>
                         <p><span className="font-semibold">Description:</span> {match.lostItem.description || 'N/A'}</p>
@@ -390,24 +658,20 @@ export default function AIAgentPage() {
                         <p><span className="font-semibold">Date Lost:</span> {match.lostItem.dateLost ? new Date(match.lostItem.dateLost).toLocaleDateString() : 'N/A'}</p>
                         <p><span className="font-semibold">Reported by:</span> {match.lostItem.userName || 'N/A'}</p>
                       </div>
-                    ) : (
-                      <div className="text-gray-500 italic">Lost item data not found</div>
-                    )}
-                    {match.lostItem?.image && (
-                      <img
-                        src={match.lostItem.image}
-                        alt={match.lostItem.title || 'Lost item'}
-                        className="w-full h-32 object-cover rounded-lg mt-3"
-                      />
-                    )}
-                  </div>
+                      {match.lostItem.image && (
+                        <img
+                          src={match.lostItem.image}
+                          alt={match.lostItem.title || 'Lost item'}
+                          className="w-full h-32 object-cover rounded-lg mt-3"
+                        />
+                      )}
+                    </div>
 
-                  {/* Found Item */}
-                  <div className="border border-green-200 rounded-lg p-4 bg-green-50">
-                    <h4 className="font-bold text-green-800 mb-3 flex items-center gap-2">
-                      ✅ Found Item
-                    </h4>
-                    {match.foundItem ? (
+                    {/* Found Item */}
+                    <div className="border border-green-200 rounded-lg p-4 bg-green-50">
+                      <h4 className="font-bold text-green-800 mb-3 flex items-center gap-2">
+                        ✅ Found Item
+                      </h4>
                       <div className="space-y-2">
                         <p><span className="font-semibold">Title:</span> {match.foundItem.title || 'N/A'}</p>
                         <p><span className="font-semibold">Description:</span> {match.foundItem.description || 'N/A'}</p>
@@ -416,50 +680,53 @@ export default function AIAgentPage() {
                         <p><span className="font-semibold">Date Found:</span> {match.foundItem.dateFound ? new Date(match.foundItem.dateFound).toLocaleDateString() : 'N/A'}</p>
                         <p><span className="font-semibold">Found by:</span> {match.foundItem.userName || 'N/A'}</p>
                       </div>
-                    ) : (
-                      <div className="text-gray-500 italic">Found item data not found</div>
-                    )}
-                    {match.foundItem?.image && (
-                      <img
-                        src={match.foundItem.image}
-                        alt={match.foundItem.title || 'Found item'}
-                        className="w-full h-32 object-cover rounded-lg mt-3"
-                      />
+                      {match.foundItem.image && (
+                        <img
+                          src={match.foundItem.image}
+                          alt={match.foundItem.title || 'Found item'}
+                          className="w-full h-32 object-cover rounded-lg mt-3"
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* AI Similarities */}
+                  <div className="mt-6 bg-purple-50 border border-purple-200 rounded-lg p-4">
+                    <h4 className="font-bold text-purple-800 mb-3">🧠 AI Analysis Results:</h4>
+                    <ul className="space-y-2">
+                      {match.similarities.map((similarity, simIndex) => (
+                        <li key={simIndex} className="flex items-center gap-2 text-purple-700">
+                          <span className="text-green-500">✓</span>
+                          {similarity}
+                        </li>
+                      ))}
+                    </ul>
+                    {match.reasoning && (
+                      <div className="mt-3 p-3 bg-white rounded border">
+                        <p className="text-sm text-gray-700"><span className="font-semibold">AI Reasoning:</span> {match.reasoning}</p>
+                      </div>
                     )}
                   </div>
-                </div>
 
-                {/* AI Similarities */}
-                <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h4 className="font-bold text-blue-800 mb-3">🧠 AI Similarities Detected:</h4>
-                  <ul className="space-y-2">
-                    {match.similarities.map((similarity, index) => (
-                      <li key={index} className="flex items-center gap-2 text-blue-700">
-                        <span className="text-green-500">✓</span>
-                        {similarity}
-                      </li>
-                    ))}
-                  </ul>
+                  {/* Action Buttons */}
+                  <div className="flex gap-3 mt-6">
+                    {!match.isExisting && (
+                      <>
+                        <button className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded font-semibold">
+                          ✅ Confirm This Match
+                        </button>
+                        <button className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded font-semibold">
+                          ❌ Not a Match
+                        </button>
+                      </>
+                    )}
+                    <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded font-semibold">
+                      📧 Contact Both Parties
+                    </button>
+                  </div>
                 </div>
-
-                {/* Action Buttons */}
-                <div className="flex gap-3 mt-6">
-                  {match.status === 'pending' && (
-                    <>
-                      <button className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded font-semibold">
-                        ✅ Confirm Match
-                      </button>
-                      <button className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded font-semibold">
-                        ❌ Reject Match
-                      </button>
-                    </>
-                  )}
-                  <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded font-semibold">
-                    📧 Contact Both Parties
-                  </button>
-                </div>
-              </div>
-            ))
+              ))
+            )
           )}
         </div>
       </div>
