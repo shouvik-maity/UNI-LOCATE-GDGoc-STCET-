@@ -104,12 +104,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Firebase** - For authentication and real-time capabilities
 - **Gemini AI** - For intelligent image analysis
 
-## 📞 Support
-
-- 📧 **Email**: support@unilocate.com
-- 🐛 **Issues**: [GitHub Issues](https://github.com/yourusername/unilocate/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/yourusername/unilocate/discussions)
-
 ---
 
 **Built with ❤️ for university communities**
