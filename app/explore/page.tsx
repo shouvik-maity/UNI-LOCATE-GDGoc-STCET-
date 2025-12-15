@@ -165,8 +165,8 @@ export default function ExplorePage() {
                     <p>👤 <strong>{item.userName}</strong></p>
 
 
+
                     {item.userEmail && <p>📧 <strong>{item.userEmail}</strong></p>}
-                    <p>📞 <strong>{item.userPhone}</strong></p>
                   </div>
 
                   {/* Status Badge */}

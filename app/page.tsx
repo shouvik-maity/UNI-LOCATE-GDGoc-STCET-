@@ -53,8 +53,9 @@ export default function Home() {
               <div className="text-4xl mb-3 sm:mb-4">💬</div>
               <h3 className="text-lg sm:text-xl font-semibold mb-2">Contact Safely</h3>
 
+
               <p className="text-sm sm:text-base text-gray-600">
-                Contact safely with students through Gmail and Phone Number
+                Contact safely with students through Gmail
               </p>
             </div>
           </div>
