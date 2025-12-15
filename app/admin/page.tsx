@@ -90,9 +90,10 @@ export default function AdminPage() {
       setLoadingStats(true)
       setError('')
 
-      // Only fetch items reported by the current user
-      const userId = user?.uid
-      if (!userId) {
+
+
+      // Allow all authenticated users to access admin functionality
+      if (!user) {
         setError('User not authenticated')
         return
       }
@@ -108,10 +109,11 @@ export default function AdminPage() {
       const skip = (currentPage - 1) * itemsPerPage
       const limit = Math.min(itemsPerPage, defaultLimit)
       
-      // Fetch lost and found items data for the current user only with pagination
+
+      // Fetch lost and found items data with pagination (remove user filtering)
       const [lostRes, foundRes] = await Promise.all([
-        fetch(`/api/admin/lost?limit=${limit}&skip=${skip}&status=all&userId=${userId}`),
-        fetch(`/api/admin/found?limit=${limit}&skip=${skip}&status=all&userId=${userId}`),
+        fetch(`/api/admin/lost?limit=${limit}&skip=${skip}&status=all`),
+        fetch(`/api/admin/found?limit=${limit}&skip=${skip}&status=all`),
       ])
 
       // Process lost items API
@@ -344,6 +346,7 @@ export default function AdminPage() {
     }
   }
 
+
   const handleMarkAsReturned = async (itemId: string, itemType: 'lost' | 'found') => {
     try {
       setError('')
@@ -369,7 +372,10 @@ export default function AdminPage() {
         completedMatches: prevStats.completedMatches + 1,
       }))
       
-      fetchData()
+      // Add a small delay to ensure database write is completed
+      setTimeout(() => {
+        fetchData()
+      }, 500)
     } catch (error: any) {
       console.error('Error marking as returned:', error)
       setError(`❌ ${error.message || 'Failed to mark item as returned'}`)
@@ -821,10 +827,11 @@ export default function AdminPage() {
                 </div>
                 
                 <div className="flex gap-3 mt-6">
+
                   {selectedItem.status !== 'returned' && (
                     <button
-                      onClick={() => {
-                        handleMarkAsReturned(selectedItem._id, activeTab)
+                      onClick={async () => {
+                        await handleMarkAsReturned(selectedItem._id, activeTab)
                         setShowItemModal(false)
                       }}
                       className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded font-semibold"
