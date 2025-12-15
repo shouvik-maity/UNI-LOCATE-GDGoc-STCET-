@@ -92,6 +92,55 @@ export async function GET(request: NextRequest) {
   }
 }
 
+
+export async function DELETE(request: NextRequest) {
+  try {
+    await connectDB()
+
+    const { searchParams } = new URL(request.url)
+    const itemId = searchParams.get('id')
+
+    if (!itemId) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Item ID is required',
+        },
+        { status: 400 }
+      )
+    }
+
+    const deletedItem = await LostItem.findByIdAndDelete(itemId)
+
+    if (!deletedItem) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Lost item not found',
+        },
+        { status: 404 }
+      )
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: 'Lost item deleted successfully',
+      },
+      { status: 200 }
+    )
+  } catch (error: any) {
+    console.error('Error deleting lost item:', error)
+    return NextResponse.json(
+      {
+        success: false,
+        message: error.message || 'Failed to delete lost item',
+      },
+      { status: 500 }
+    )
+  }
+}
+
 export async function PATCH(request: NextRequest) {
   try {
     await connectDB()
