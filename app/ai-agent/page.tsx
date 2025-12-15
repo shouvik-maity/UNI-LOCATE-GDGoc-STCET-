@@ -58,6 +58,8 @@ export default function AIAgentPage() {
     }
   }, [loading, user])
 
+
+
   const fetchData = async () => {
     try {
       // Fetch existing matches
@@ -142,14 +144,20 @@ export default function AIAgentPage() {
     }
   }
 
+
   // Filter and sort matches based on search criteria
   const filteredMatches = matches.filter(match => {
+    // Skip matches with missing data
+    if (!match || !match.lostItem || !match.foundItem) {
+      return false
+    }
+
     const matchesSearch = searchQuery === '' ||
-      match.lostItem.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      match.foundItem.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      match.lostItem.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      match.foundItem.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      match.similarities.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()))
+      (match.lostItem.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (match.foundItem.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (match.lostItem.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (match.foundItem.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (match.similarities || []).some(s => s && s.toLowerCase().includes(searchQuery.toLowerCase()))
 
     const matchesCategory = selectedCategory === 'all' || 
       match.lostItem.category === selectedCategory || 
@@ -159,11 +167,11 @@ export default function AIAgentPage() {
   }).sort((a, b) => {
     switch (sortBy) {
       case 'score':
-        return b.matchScore - a.matchScore
+        return (b.matchScore || 0) - (a.matchScore || 0)
       case 'date':
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
       case 'category':
-        return a.lostItem.category.localeCompare(b.lostItem.category)
+        return (a.lostItem?.category || '').localeCompare(b.lostItem?.category || '')
       default:
         return 0
     }
@@ -365,6 +373,7 @@ export default function AIAgentPage() {
                   </div>
                 </div>
 
+
                 {/* Items Comparison */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Lost Item */}
@@ -372,18 +381,22 @@ export default function AIAgentPage() {
                     <h4 className="font-bold text-red-800 mb-3 flex items-center gap-2">
                       📍 Lost Item
                     </h4>
-                    <div className="space-y-2">
-                      <p><span className="font-semibold">Title:</span> {match.lostItem.title}</p>
-                      <p><span className="font-semibold">Description:</span> {match.lostItem.description}</p>
-                      <p><span className="font-semibold">Category:</span> {match.lostItem.category}</p>
-                      <p><span className="font-semibold">Location:</span> {match.lostItem.location}</p>
-                      <p><span className="font-semibold">Date Lost:</span> {new Date(match.lostItem.dateLost).toLocaleDateString()}</p>
-                      <p><span className="font-semibold">Reported by:</span> {match.lostItem.userName}</p>
-                    </div>
-                    {match.lostItem.image && (
+                    {match.lostItem ? (
+                      <div className="space-y-2">
+                        <p><span className="font-semibold">Title:</span> {match.lostItem.title || 'N/A'}</p>
+                        <p><span className="font-semibold">Description:</span> {match.lostItem.description || 'N/A'}</p>
+                        <p><span className="font-semibold">Category:</span> {match.lostItem.category || 'N/A'}</p>
+                        <p><span className="font-semibold">Location:</span> {match.lostItem.location || 'N/A'}</p>
+                        <p><span className="font-semibold">Date Lost:</span> {match.lostItem.dateLost ? new Date(match.lostItem.dateLost).toLocaleDateString() : 'N/A'}</p>
+                        <p><span className="font-semibold">Reported by:</span> {match.lostItem.userName || 'N/A'}</p>
+                      </div>
+                    ) : (
+                      <div className="text-gray-500 italic">Lost item data not found</div>
+                    )}
+                    {match.lostItem?.image && (
                       <img
                         src={match.lostItem.image}
-                        alt={match.lostItem.title}
+                        alt={match.lostItem.title || 'Lost item'}
                         className="w-full h-32 object-cover rounded-lg mt-3"
                       />
                     )}
@@ -394,18 +407,22 @@ export default function AIAgentPage() {
                     <h4 className="font-bold text-green-800 mb-3 flex items-center gap-2">
                       ✅ Found Item
                     </h4>
-                    <div className="space-y-2">
-                      <p><span className="font-semibold">Title:</span> {match.foundItem.title}</p>
-                      <p><span className="font-semibold">Description:</span> {match.foundItem.description}</p>
-                      <p><span className="font-semibold">Category:</span> {match.foundItem.category}</p>
-                      <p><span className="font-semibold">Location:</span> {match.foundItem.location}</p>
-                      <p><span className="font-semibold">Date Found:</span> {new Date(match.foundItem.dateFound).toLocaleDateString()}</p>
-                      <p><span className="font-semibold">Found by:</span> {match.foundItem.userName}</p>
-                    </div>
-                    {match.foundItem.image && (
+                    {match.foundItem ? (
+                      <div className="space-y-2">
+                        <p><span className="font-semibold">Title:</span> {match.foundItem.title || 'N/A'}</p>
+                        <p><span className="font-semibold">Description:</span> {match.foundItem.description || 'N/A'}</p>
+                        <p><span className="font-semibold">Category:</span> {match.foundItem.category || 'N/A'}</p>
+                        <p><span className="font-semibold">Location:</span> {match.foundItem.location || 'N/A'}</p>
+                        <p><span className="font-semibold">Date Found:</span> {match.foundItem.dateFound ? new Date(match.foundItem.dateFound).toLocaleDateString() : 'N/A'}</p>
+                        <p><span className="font-semibold">Found by:</span> {match.foundItem.userName || 'N/A'}</p>
+                      </div>
+                    ) : (
+                      <div className="text-gray-500 italic">Found item data not found</div>
+                    )}
+                    {match.foundItem?.image && (
                       <img
                         src={match.foundItem.image}
-                        alt={match.foundItem.title}
+                        alt={match.foundItem.title || 'Found item'}
                         className="w-full h-32 object-cover rounded-lg mt-3"
                       />
                     )}

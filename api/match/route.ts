@@ -416,6 +416,7 @@ export async function POST(request: NextRequest) {
 
 
 
+
 export async function GET(request: NextRequest) {
   try {
     await connectDB()
@@ -430,14 +431,36 @@ export async function GET(request: NextRequest) {
       query = { status }
     }
 
-    const matches = await Match.find(query).sort({ matchScore: -1 }).limit(limit).skip(skip)
+    // Find matches and populate the lost and found items
+    const matches = await Match.find(query)
+      .sort({ matchScore: -1 })
+      .limit(limit)
+      .skip(skip)
+
+    // Manually populate the lost and found items since we're dealing with string IDs
+    const populatedMatches = await Promise.all(
+      matches.map(async (match) => {
+        const matchObj = match.toObject()
+        
+        // Fetch the lost item
+        const lostItem = await LostItem.findById(match.lostItemId).lean()
+        // Fetch the found item  
+        const foundItem = await FoundItem.findById(match.foundItemId).lean()
+        
+        // Add the populated item data to the match object
+        matchObj.lostItem = lostItem || null
+        matchObj.foundItem = foundItem || null
+        
+        return matchObj
+      })
+    )
 
     const total = await Match.countDocuments(query)
 
     return NextResponse.json(
       {
         success: true,
-        data: matches,
+        data: populatedMatches,
         pagination: {
           total,
           skip,
