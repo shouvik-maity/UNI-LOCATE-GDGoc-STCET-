@@ -8,6 +8,7 @@ const categories = ['Electronics', 'Accessories', 'Clothing', 'Books', 'Bags', '
 
 export default function LostPage() {
   const { user, loading } = useAuth()
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -16,7 +17,6 @@ export default function LostPage() {
     dateLost: '',
     image: '',
     userName: '',
-    userPhone: '',
   })
 
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -256,6 +256,7 @@ export default function LostPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+
         body: JSON.stringify({
           title: formData.title,
           description: formData.description,
@@ -266,7 +267,6 @@ export default function LostPage() {
           userId: user.uid,
           userName: user.displayName || formData.userName,
           userEmail: user.email,
-          userPhone: formData.userPhone,
         }),
       })
 
@@ -277,6 +277,7 @@ export default function LostPage() {
       }
 
       setSuccess('Lost item reported successfully! We will help you find it.')
+
       setFormData({
         title: '',
         description: '',
@@ -285,7 +286,6 @@ export default function LostPage() {
         dateLost: '',
         image: '',
         userName: '',
-        userPhone: '',
       })
       setImagePreview(null)
 
@@ -429,31 +429,18 @@ export default function LostPage() {
               </div>
             </div>
 
+
             {/* User Info */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Your Name</label>
-                <input
-                  type="text"
-                  name="userName"
-                  value={formData.userName}
-                  onChange={handleChange}
-                  placeholder="Your name"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number *</label>
-                <input
-                  type="tel"
-                  name="userPhone"
-                  value={formData.userPhone}
-                  onChange={handleChange}
-                  placeholder="Your phone number"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  required
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Your Name</label>
+              <input
+                type="text"
+                name="userName"
+                value={formData.userName}
+                onChange={handleChange}
+                placeholder="Your name"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              />
             </div>
 
             {/* Submit Button */}
