@@ -56,9 +56,13 @@ export default function AdminPage() {
   const [showImageModal, setShowImageModal] = useState(false)
   
 
+
   // Bulk action states
   const [selectedItems, setSelectedItems] = useState<string[]>([])
   const [bulkActionLoading, setBulkActionLoading] = useState(false)
+  
+  // Individual item action states
+  const [itemActionLoading, setItemActionLoading] = useState<{[key: string]: boolean}>({})
   
   // Export states
   const [exportLoading, setExportLoading] = useState(false)
@@ -110,10 +114,11 @@ export default function AdminPage() {
       const limit = Math.min(itemsPerPage, defaultLimit)
       
 
-      // Fetch lost and found items data with pagination (remove user filtering)
+
+      // Fetch lost and found items data with pagination (filter by current user only)
       const [lostRes, foundRes] = await Promise.all([
-        fetch(`/api/admin/lost?limit=${limit}&skip=${skip}&status=all`),
-        fetch(`/api/admin/found?limit=${limit}&skip=${skip}&status=all`),
+        fetch(`/api/admin/lost?limit=${limit}&skip=${skip}&status=all&userId=${user.uid}`),
+        fetch(`/api/admin/found?limit=${limit}&skip=${skip}&status=all&userId=${user.uid}`),
       ])
 
       // Process lost items API
@@ -161,10 +166,11 @@ export default function AdminPage() {
         completedMatches,
       })
 
+
       // Show success message if at least some data was loaded
       const loadedCount = [lostData.success, foundData.success].filter(Boolean).length
       if (loadedCount > 0) {
-        setSuccessMessage(`✅ Loaded ${loadedCount}/2 data sources successfully`)
+        setSuccessMessage(`✅ Loaded your reports successfully`)
         setTimeout(() => setSuccessMessage(''), 3000)
       }
 
@@ -347,9 +353,12 @@ export default function AdminPage() {
   }
 
 
+
   const handleMarkAsReturned = async (itemId: string, itemType: 'lost' | 'found') => {
     try {
       setError('')
+      setItemActionLoading(prev => ({ ...prev, [itemId]: true }))
+      
       const endpoint = itemType === 'lost' ? '/api/lost' : '/api/found'
       
       const response = await fetch(endpoint, {
@@ -364,22 +373,35 @@ export default function AdminPage() {
         throw new Error(data.message || 'Failed to update item')
       }
 
-      addNotification('success', '✅ Item marked as returned!')
-      
-      // Update stats
+      // Update stats immediately
       setStats((prevStats) => ({
         ...prevStats,
         completedMatches: prevStats.completedMatches + 1,
       }))
+
+      // Update the item status immediately in the UI for better UX
+      if (itemType === 'lost') {
+        setLostItems(prev => prev.map(item => 
+          item._id === itemId ? { ...item, status: 'returned' } : item
+        ))
+      } else {
+        setFoundItems(prev => prev.map(item => 
+          item._id === itemId ? { ...item, status: 'returned' } : item
+        ))
+      }
+
+      addNotification('success', '✅ Item marked as returned!')
       
-      // Add a small delay to ensure database write is completed
+      // Refresh data after a short delay to ensure consistency
       setTimeout(() => {
         fetchData()
-      }, 500)
+      }, 1000)
     } catch (error: any) {
       console.error('Error marking as returned:', error)
       setError(`❌ ${error.message || 'Failed to mark item as returned'}`)
       setTimeout(() => setError(''), 5000)
+    } finally {
+      setItemActionLoading(prev => ({ ...prev, [itemId]: false }))
     }
   }
 
@@ -407,8 +429,9 @@ export default function AdminPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="bg-white p-8 rounded-lg shadow-md text-center">
-          <h2 className="text-2xl font-bold mb-4">Admin Access Required</h2>
-          <p className="text-gray-600 mb-6">Please log in with admin account.</p>
+
+          <h2 className="text-2xl font-bold mb-4">Login Required</h2>
+          <p className="text-gray-600 mb-6">Please log in to view your lost and found reports.</p>
           <Link href="/" className="text-blue-500 hover:underline">
             Go back home
           </Link>
@@ -420,7 +443,8 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-8 sm:py-12">
       <div className="container mx-auto px-4 sm:px-6">
-        <h1 className="text-3xl sm:text-4xl font-bold text-primary mb-8">👨‍💼 Admin Dashboard</h1>
+
+        <h1 className="text-3xl sm:text-4xl font-bold text-primary mb-8">📋 My Reports</h1>
 
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
@@ -725,12 +749,23 @@ export default function AdminPage() {
                               👁️ View Details
                             </button>
                             
+
                             {item.status !== 'returned' && (
                               <button
                                 onClick={() => handleMarkAsReturned(item._id, activeTab)}
-                                className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-xs font-semibold transition"
+                                disabled={itemActionLoading[item._id]}
+                                className="bg-green-500 hover:bg-green-600 disabled:bg-green-300 disabled:cursor-not-allowed text-white px-3 py-1 rounded text-xs font-semibold transition flex items-center gap-1"
                               >
-                                ✅ Mark Returned
+                                {itemActionLoading[item._id] ? (
+                                  <>
+                                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                                    Updating...
+                                  </>
+                                ) : (
+                                  <>
+                                    ✅ Mark Returned
+                                  </>
+                                )}
                               </button>
                             )}
                             

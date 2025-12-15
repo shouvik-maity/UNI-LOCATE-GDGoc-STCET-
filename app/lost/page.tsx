@@ -9,6 +9,7 @@ const categories = ['Electronics', 'Accessories', 'Clothing', 'Books', 'Bags', '
 export default function LostPage() {
   const { user, loading } = useAuth()
 
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -17,6 +18,7 @@ export default function LostPage() {
     dateLost: '',
     image: '',
     userName: '',
+    userPhone: '',
   })
 
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -242,8 +244,9 @@ export default function LostPage() {
     setError('')
     setSuccess('')
 
+
     // Validation
-    if (!formData.title || !formData.description || !formData.category || !formData.location || !formData.dateLost || !formData.image) {
+    if (!formData.title || !formData.description || !formData.category || !formData.location || !formData.dateLost || !formData.image || !formData.userName || !formData.userPhone) {
       setError('Please fill in all fields')
       return
     }
@@ -257,6 +260,7 @@ export default function LostPage() {
           'Content-Type': 'application/json',
         },
 
+
         body: JSON.stringify({
           title: formData.title,
           description: formData.description,
@@ -267,6 +271,7 @@ export default function LostPage() {
           userId: user.uid,
           userName: user.displayName || formData.userName,
           userEmail: user.email,
+          userPhone: formData.userPhone,
         }),
       })
 
@@ -278,6 +283,7 @@ export default function LostPage() {
 
       setSuccess('Lost item reported successfully! We will help you find it.')
 
+
       setFormData({
         title: '',
         description: '',
@@ -286,6 +292,7 @@ export default function LostPage() {
         dateLost: '',
         image: '',
         userName: '',
+        userPhone: '',
       })
       setImagePreview(null)
 
@@ -430,9 +437,10 @@ export default function LostPage() {
             </div>
 
 
-            {/* User Info */}
+
+            {/* Contact Info */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Your Name</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Your Name *</label>
               <input
                 type="text"
                 name="userName"
@@ -440,6 +448,20 @@ export default function LostPage() {
                 onChange={handleChange}
                 placeholder="Your name"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number *</label>
+              <input
+                type="tel"
+                name="userPhone"
+                value={formData.userPhone}
+                onChange={handleChange}
+                placeholder="Your phone number"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                required
               />
             </div>
 
