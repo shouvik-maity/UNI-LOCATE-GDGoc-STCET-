@@ -168,12 +168,62 @@ export async function PATCH(request: NextRequest) {
       },
       { status: 200 }
     )
+
   } catch (error: any) {
     console.error('Error updating found item:', error)
     return NextResponse.json(
       {
         success: false,
         message: error.message || 'Failed to update found item',
+      },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    await connectDB()
+
+    const { searchParams } = new URL(request.url)
+    const itemId = searchParams.get('itemId')
+
+    if (!itemId) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Missing itemId parameter',
+        },
+        { status: 400 }
+      )
+    }
+
+    const deletedItem = await FoundItem.findByIdAndDelete(itemId)
+
+    if (!deletedItem) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Found item not found',
+        },
+        { status: 404 }
+      )
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: 'Found item deleted successfully',
+        data: deletedItem,
+      },
+      { status: 200 }
+    )
+  } catch (error: any) {
+    console.error('Error deleting found item:', error)
+    return NextResponse.json(
+      {
+        success: false,
+        message: error.message || 'Failed to delete found item',
       },
       { status: 500 }
     )
