@@ -261,20 +261,46 @@ async function analyzeItemsMatch(lostItem: any, foundItem: any): Promise<{ score
         analysisText = (result as any).response.text()
       }
 
-      // Extract JSON from response with improved parsing
+
+      // Extract JSON from response with robust parsing
       let analysis
       try {
-        const jsonMatch = analysisText.match(/\{[\s\S]*\}/)
-        if (!jsonMatch) {
-          throw new Error('No JSON found in response')
-        }
-
-        // Clean up the JSON string
-        let jsonString = jsonMatch[0]
-        // Remove any markdown code blocks
-        jsonString = jsonString.replace(/```json\s*/g, '').replace(/```\s*/g, '')
+        // Try multiple extraction strategies for better reliability
+        let jsonString = analysisText.trim()
         
-        analysis = JSON.parse(jsonString)
+        // Strategy 1: Extract from markdown code blocks
+        const codeBlockMatch = jsonString.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/i)
+        if (codeBlockMatch) {
+          jsonString = codeBlockMatch[1]
+        } else {
+          // Strategy 2: Find the first JSON object
+          const firstBrace = jsonString.indexOf('{')
+          const lastBrace = jsonString.lastIndexOf('}')
+          
+          if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+            jsonString = jsonString.substring(firstBrace, lastBrace + 1)
+          } else {
+            throw new Error('No valid JSON object found in response')
+          }
+        }
+        
+        // Clean up the JSON string
+        jsonString = jsonString.replace(/```json\s*/g, '').replace(/```\s*/g, '')
+        jsonString = jsonString.replace(/^[^{]*/, '').replace(/[^}]*$/, '')
+        
+        // Validate JSON structure
+        try {
+          analysis = JSON.parse(jsonString)
+        } catch (jsonParseError) {
+          // Try to fix common JSON formatting issues
+          jsonString = jsonString
+            .replace(/,\s*}/g, '}') // Remove trailing commas
+            .replace(/,\s*]/g, ']') // Remove trailing array commas
+            .replace(/'/g, '"')     // Replace single quotes with double quotes
+            .replace(/(\w+):/g, '"$1":') // Quote unquoted keys
+          
+          analysis = JSON.parse(jsonString)
+        }
       } catch (parseError) {
         console.error(`Failed to parse Gemini response as JSON (attempt ${attempt}):`, parseError)
         console.error('Response text:', analysisText)
