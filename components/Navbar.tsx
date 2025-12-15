@@ -17,6 +17,7 @@ export default function Navbar() {
           </Link>
 
 
+
           <div className="hidden md:flex space-x-4 lg:space-x-6 items-center">
             <Link href="/" className="text-gray-700 hover:text-primary text-sm lg:text-base">Home</Link>
 
@@ -26,6 +27,7 @@ export default function Navbar() {
                 <Link href="/lost" className="text-gray-700 hover:text-primary text-sm lg:text-base">📍 Report Lost</Link>
                 <Link href="/found" className="text-gray-700 hover:text-primary text-sm lg:text-base">✅ Report Found</Link>
                 <Link href="/explore" className="text-gray-700 hover:text-primary text-sm lg:text-base">🔍 Explore</Link>
+                <Link href="/ai-agent" className="text-purple-700 hover:text-purple-900 text-sm lg:text-base font-semibold bg-purple-100 px-3 py-1 rounded-lg">🤖 AI Agent</Link>
                 <Link href="/admin" className="text-gray-700 hover:text-primary text-sm lg:text-base">⚙️ Admin</Link>
               </>
             )}
@@ -55,11 +57,13 @@ export default function Navbar() {
             <Link href="/" className="block px-4 py-2">Home</Link>
 
 
+
             {user && (
               <>
                 <Link href="/lost" className="block px-4 py-2">📍 Report Lost</Link>
                 <Link href="/found" className="block px-4 py-2">✅ Report Found</Link>
                 <Link href="/explore" className="block px-4 py-2">🔍 Explore</Link>
+                <Link href="/ai-agent" className="block px-4 py-2 bg-purple-100 text-purple-800 font-semibold rounded">🤖 AI Agent</Link>
                 <Link href="/admin" className="block px-4 py-2">⚙️ Admin</Link>
               </>
             )}
