@@ -20,6 +20,7 @@ async function removeUnwantedItems() {
   try {
     console.log('🔍 Searching for unwanted items...');
     
+
     // Define the items to remove
     const itemsToRemove = [
       {
@@ -37,6 +38,14 @@ async function removeUnwantedItems() {
         location: 'University Library Building A',
         userName: 'John Doe',
         userEmail: 'john@example.com'
+      },
+      {
+        title: 'Blue iPhone 14 Pro',
+        description: 'Found a blue iPhone 14 Pro with cracked screen protector, in Building A near the study area',
+        category: 'Electronics',
+        location: 'Building A near the study area',
+        userName: 'Jane Smith',
+        userEmail: 'jane@example.com'
       }
     ];
 
