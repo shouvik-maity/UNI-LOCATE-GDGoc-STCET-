@@ -14,16 +14,8 @@ export default function HelpCentre() {
       answer:
         'Navigate to "Found Items" and complete the form with details about the item you found. Include the location where you found it, a clear description, and a photo. Once submitted, the system will automatically match it with similar lost items.',
     },
-    {
-      question: 'How does the AI matching system work?',
-      answer:
-        'Our AI-powered matching system analyzes descriptions, categories, and details of lost and found items. When a potential match is detected (with a match score above 50%), both parties are notified and can communicate through the chat system.',
-    },
-    {
-      question: 'How can I contact the other person about a match?',
-      answer:
-        'Once a match is confirmed, you can use the Chat section to communicate directly with the other party. Click on the conversation to start messaging about the item details and arrange a meeting.',
-    },
+
+
     {
       question: 'What categories can I choose from?',
       answer:
@@ -49,11 +41,8 @@ export default function HelpCentre() {
       answer:
         'Lost and found items stay active for 90 days. You can manually mark items as "resolved" at any time when you no longer need assistance finding or returning the item.',
     },
-    {
-      question: 'Who should I contact for technical issues?',
-      answer:
-        'If you encounter any technical problems, please use the contact form or email our support team. We typically respond within 24 hours.',
-    },
+
+
   ]
 
   return (
