@@ -102,7 +102,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Tailwind CSS** - For the utility-first CSS framework
 - **MongoDB** - For the flexible database solution
 - **Firebase** - For authentication and real-time capabilities
-- **Gemini AI** - For intelligent image analysis
 
 ---
 
